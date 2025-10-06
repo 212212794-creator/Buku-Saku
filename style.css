@@ -35,7 +35,17 @@ body {
     align-items: center;
     gap: 10px;
 }
-
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.logo-img {
+    background-color: transparent; 
+    height: 30px; 
+    width: auto; 
+    margin-right: 10px;
+}
 .nav {
     display: flex;
     gap: 10px;
@@ -214,7 +224,7 @@ body {
 
 .hero-visual .bar {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.6) 100%);
-    width: 30px;
+    width: 60px;
     border-radius: 8px 8px 0 0;
     animation: barGrow 1.2s ease-out;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -658,4 +668,5 @@ footer p {
     .section-title {
         font-size: 1.5em;
     }
+
 }
