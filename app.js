@@ -59,8 +59,6 @@ function escapeHtml(unsafe) {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
 }
-// Convert numbered inline text (e.g. "1. a 2. b 3. c" or lines starting with numbers)
-// into an ordered list HTML. Also supports newline-separated items as <ul>.
 function toListHTML(text) {
     // Handle null/undefined
     if (text === null || text === undefined) return '<p>Tidak Tersedia.</p>';
@@ -84,7 +82,7 @@ function toListHTML(text) {
         for (const k of urlKeys) {
             if (text[k] && typeof text[k] === 'string') {
                 const safeUrl = escapeHtml(text[k]);
-                return <p><img src="${safeUrl}" alt="image" class="metadata-img"/></p>;
+                return `<p><img src="${safeUrl}" alt="image" class="metadata-img"/></p>`;
             }
         }
 
@@ -96,7 +94,7 @@ function toListHTML(text) {
         // Fallback: attempt to stringify useful values (keys with primitive values)
         const primitiveEntries = Object.entries(text).filter(([k, v]) => (v === null || ['string', 'number', 'boolean'].includes(typeof v)));
         if (primitiveEntries.length) {
-            return '<ul>' + primitiveEntries.map(([k, v]) => <li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(String(v))}</li>).join('') + '</ul>';
+            return '<ul>' + primitiveEntries.map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(String(v))}</li>`).join('') + '</ul>';
         }
 
         // Last resort: stringify whole object safely
@@ -114,17 +112,18 @@ function toListHTML(text) {
     // Normalize newlines
     s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-    // Count numbered patterns like "1. " or "1) "
-    const numberedMatches = s.match(/\d+[\.)]\s+/g) || [];
-    if (numberedMatches.length >= 2) {
-        // Split on numbers, drop any empty leading
-        const parts = s.split(/\d+[\.)]\s+/).map(p => p.trim()).filter(Boolean);
-        if (parts.length) {
-            return '<ol>' + parts.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ol>';
-        }
+    // --- PERBAIKAN DI SINI ---
+    // Deteksi pola "1. xxx 2. xxx 3. xxx" dalam satu baris, agar jadi <ol>
+    const numberedParts = s.match(/(\d+[\.)]\s*([^\d]+?)(?=(\d+[\.)]|$))/g);
+    if (numberedParts && numberedParts.length >= 2) {
+        return '<ol>' + numberedParts.map(p => {
+            // Hilangkan nomor di awal
+            const itemText = p.replace(/^\d+[\.)]\s*/, '');
+            return `<li>${escapeHtml(itemText.trim())}</li>`;
+        }).join('') + '</ol>';
     }
 
-    // If newline-separated and multiple lines, create unordered list
+    // Jika newline-separated dan multiple lines, buat unordered list
     const lines = s.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length > 1) {
         return '<ul>' + lines.map(l => '<li>' + escapeHtml(l) + '</li>').join('') + '</ul>';
@@ -525,3 +524,4 @@ document.addEventListener('DOMContentLoaded', () => {
     showView('view-home');
 
 });
+
