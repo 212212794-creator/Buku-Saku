@@ -50,92 +50,6 @@ function formatValue(value, decimals = 2) {
     return roundedNum.toLocaleString('id-ID', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-// --- TEXT HELPERS ---
-function escapeHtml(unsafe) {
-    if (unsafe === null || unsafe === undefined) return '';
-    return String(unsafe)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-}
-
-// Convert numbered inline text (e.g. "1. a 2. b 3. c" or lines starting with numbers)
-// into an ordered list HTML. Also supports newline-separated items as <ul>.
-function toListHTML(text) {
-    // Handle null/undefined
-    if (text === null || text === undefined) return '<p>Tidak Tersedia.</p>';
-
-    // If the value is already an array, render each item (prefer numbered if items look numbered)
-    if (Array.isArray(text)) {
-        if (text.length === 0) return '<p>Tidak Tersedia.</p>';
-        // If array of primitives, render as UL
-        const primitives = text.every(t => (t === null || t === undefined) || (typeof t === 'string' || typeof t === 'number' || typeof t === 'boolean'));
-        if (primitives) {
-            return '<ul>' + text.map(t => '<li>' + escapeHtml(String(t)) + '</li>').join('') + '</ul>';
-        }
-        // For mixed/objects, render per item recursively
-        return '<div>' + text.map(item => typeof item === 'object' ? toListHTML(item) : '<p>' + escapeHtml(String(item)) + '</p>').join('') + '</div>';
-    }
-
-    // If it's an object, try to detect image-like or text-like structure
-    if (typeof text === 'object') {
-        // Common image property names used by APIs
-        const urlKeys = ['url', 'src', 'imageUrl', 'thumbnail', 'link'];
-        for (const k of urlKeys) {
-            if (text[k] && typeof text[k] === 'string') {
-                const safeUrl = escapeHtml(text[k]);
-                return <p><img src="${safeUrl}" alt="image" class="metadata-img"/></p>;
-            }
-        }
-
-        // If object has a 'text' or 'content' property, use that
-        if (text.text || text.content) {
-            return toListHTML(text.text || text.content);
-        }
-
-        // Fallback: attempt to stringify useful values (keys with primitive values)
-        const primitiveEntries = Object.entries(text).filter(([k, v]) => (v === null || ['string', 'number', 'boolean'].includes(typeof v)));
-        if (primitiveEntries.length) {
-            return '<ul>' + primitiveEntries.map(([k, v]) => <li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(String(v))}</li>).join('') + '</ul>';
-        }
-
-        // Last resort: stringify whole object safely
-        try {
-            return '<pre>' + escapeHtml(JSON.stringify(text, null, 2)) + '</pre>';
-        } catch (e) {
-            return '<p>Data tidak dapat ditampilkan.</p>';
-        }
-    }
-
-    // Primitive (string/number)
-    let s = String(text).trim();
-    if (!s) return '<p>Tidak Tersedia.</p>';
-
-    // Normalize newlines
-    s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-    // Count numbered patterns like "1. " or "1) "
-    const numberedMatches = s.match(/\d+[\.)]\s+/g) || [];
-    if (numberedMatches.length >= 2) {
-        // Split on numbers, drop any empty leading
-        const parts = s.split(/\d+[\.)]\s+/).map(p => p.trim()).filter(Boolean);
-        if (parts.length) {
-            return '<ol>' + parts.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ol>';
-        }
-    }
-
-    // If newline-separated and multiple lines, create unordered list
-    const lines = s.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length > 1) {
-        return '<ul>' + lines.map(l => '<li>' + escapeHtml(l) + '</li>').join('') + '</ul>';
-    }
-
-    // Fallback: single paragraph (preserve single newlines with <br>)
-    return '<p>' + escapeHtml(s).replace(/\n/g, '<br>') + '</p>';
-}
-
 // --- FUNGSI 1: MENGGANTI TAMPILAN ---
 function showView(viewId) {
     document.querySelectorAll('.view-section').forEach(section => {
@@ -393,25 +307,25 @@ function handleMetadataSelect(event) {
         const indicatorName = dataDetail.nama || indicatorKey;
         metadataTitle.textContent = Metadata: ${indicatorName};
 
-        // Konten Metadata Lengkap (gunakan toListHTML untuk memformat numbered / multiline text)
+        // Konten Metadata Lengkap
         metadataContent.innerHTML = `
-            <h4>Nilai Terkini (${dataDetail.tahun || 'N/A'}):</h4>
+            <h4>Nilai Terkini (${dataDetail.tahun || 'N/A'}):</h4> 
             <p style="font-size: 1.2em; font-weight: bold; color: #3f51b5;">${formatValue(dataDetail.nilai, 2)}</p>
 
             <h4>Penjelasan/Definisi:</h4>
-            ${toListHTML(dataDetail.penjelasan || dataDetail.definisi || 'Tidak Tersedia.')}
-
+            <p>${dataDetail.penjelasan || 'Tidak Tersedia.'}</p>
+            
             <h4>Perhitungan/Metode:</h4>
-            ${toListHTML(dataDetail.perhitungan || dataDetail.metode || 'Tidak Tersedia.')}
-
+            <p>${dataDetail.perhitungan || 'Tidak Tersedia.'}</p>
+            
             <h4>Sumber Indikator:</h4>
-            ${toListHTML(dataDetail.sumber_indikator || dataDetail.sumber || 'Tidak Tersedia.')}
-
+            <p>${dataDetail.sumber_indikator || 'Tidak Tersedia.'}</p>
+            
             <h4>Faktor-faktor yang Mempengaruhi:</h4>
-            ${toListHTML(dataDetail['faktor-faktor_yang_mempengaruhi'] || dataDetail.faktor_faktor || dataDetail.faktor || 'Tidak Tersedia.')}
-
+            <p>${dataDetail['faktor-faktor_yang_mempengaruhi'] || 'Tidak Tersedia.'}</p>
+            
             <h4>Dampak:</h4>
-            ${toListHTML(dataDetail.dampak || 'Tidak Tersedia.')}
+            <p>${dataDetail.dampak || 'Tidak Tersedia.'}</p>
         `;
         
         // Tampilkan Tabel Historis
