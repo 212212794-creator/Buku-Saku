@@ -49,6 +49,7 @@ function formatValue(value, decimals = 2) {
     // Gunakan toLocaleString untuk pemisah ribuan dan desimal Indonesia
     return roundedNum.toLocaleString('id-ID', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
+
 // --- TEXT HELPERS ---
 function escapeHtml(unsafe) {
     if (unsafe === null || unsafe === undefined) return '';
@@ -59,6 +60,7 @@ function escapeHtml(unsafe) {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
 }
+
 // Convert numbered inline text (e.g. "1. a 2. b 3. c" or lines starting with numbers)
 // into an ordered list HTML. Also supports newline-separated items as <ul>.
 function toListHTML(text) {
@@ -133,6 +135,7 @@ function toListHTML(text) {
     // Fallback: single paragraph (preserve single newlines with <br>)
     return '<p>' + escapeHtml(s).replace(/\n/g, '<br>') + '</p>';
 }
+
 // --- FUNGSI 1: MENGGANTI TAMPILAN ---
 function showView(viewId) {
     document.querySelectorAll('.view-section').forEach(section => {
@@ -176,14 +179,14 @@ async function fetchData() {
         }
 
         if (!response.ok) {
-            throw new Error(`API error! Status: ${response.status}`);
+            throw new Error(API error! Status: ${response.status});
         }
         
         // Data dari Apps Script adalah Array of Indicator Objects
         const data = await response.json(); 
         
         if (data.error) {
-             dataGrid.innerHTML = `<div class="loading" style="color: red;">Error API: ${data.error}. Cek Apps Script logs Anda.</div>`;
+             dataGrid.innerHTML = <div class="loading" style="color: red;">Error API: ${data.error}. Cek Apps Script logs Anda.</div>;
              return;
         }
 
@@ -205,13 +208,13 @@ async function fetchData() {
 
     } catch (error) {
         console.error("Kesalahan saat mengambil data:", error);
-        dataGrid.innerHTML = `<div class="loading" style="color: red;">Gagal memuat data. Cek koneksi internet atau pastikan URL API sudah benar dan dideploy ulang. Pesan: ${error.message}</div>`;
+        dataGrid.innerHTML = <div class="loading" style="color: red;">Gagal memuat data. Cek koneksi internet atau pastikan URL API sudah benar dan dideploy ulang. Pesan: ${error.message}</div>;
     }
 }
 
 // --- FUNGSI 3: MEMBUAT KARTU DASHBOARD ---
 function createChartContainer(key) {
-    return `<div class="card-chart-container"><div id="chart-${key}" style="width: 100%; height: 100%;"></div></div>`;
+    return <div class="card-chart-container"><div id="chart-${key}" style="width: 100%; height: 100%;"></div></div>;
 }
 
 function createCard(data) {
@@ -225,7 +228,7 @@ function createCard(data) {
     const arrowChar = isPositive ? '▲' : (perubahanFloat < 0 ? '▼' : '▬');
     
     // Selisih diformat 2 desimal dengan tambahan "vs Tahun Lalu"
-    const changeText = `${arrowChar} ${formatValue(Math.abs(perubahanFloat), 2)} vs Tahun Lalu`;
+    const changeText = ${arrowChar} ${formatValue(Math.abs(perubahanFloat), 2)} vs Tahun Lalu;
 
     const chartHtml = createChartContainer(indicatorKey);
     
@@ -273,7 +276,7 @@ function drawDashboardCharts() {
     
     allIndicators.forEach(data => {
         const indicatorKey = data.sheet_name;
-        const chartElement = document.getElementById(`chart-${indicatorKey}`);
+        const chartElement = document.getElementById(chart-${indicatorKey});
         
         if (!chartElement) return;
         
@@ -388,10 +391,10 @@ function handleMetadataSelect(event) {
 
     if (dataDetail) { 
         const indicatorName = dataDetail.nama || indicatorKey;
-        metadataTitle.textContent = `Metadata: ${indicatorName}`;
+        metadataTitle.textContent = Metadata: ${indicatorName};
 
-        // Konten Metadata Lengkap
-       metadataContent.innerHTML = `
+        // Konten Metadata Lengkap (gunakan toListHTML untuk memformat numbered / multiline text)
+        metadataContent.innerHTML = `
             <h4>Nilai Terkini (${dataDetail.tahun || 'N/A'}):</h4>
             <p style="font-size: 1.2em; font-weight: bold; color: #3f51b5;">${formatValue(dataDetail.nilai, 2)}</p>
 
@@ -413,12 +416,12 @@ function handleMetadataSelect(event) {
         
         // Tampilkan Tabel Historis
         metadataTableContainer.classList.remove('hidden');
-        document.getElementById('table-title').textContent = `Data Historis: ${indicatorName}`;
+        document.getElementById('table-title').textContent = Data Historis: ${indicatorName};
         renderHistoryTable(dataDetail.history);
         
     } else {
         metadataTitle.textContent = 'Metadata Indikator';
-        metadataContent.innerHTML = `Silakan pilih indikator dari *dropdown* di atas untuk melihat detail.`;
+        metadataContent.innerHTML = Silakan pilih indikator dari *dropdown* di atas untuk melihat detail.;
     }
 }
 
@@ -445,7 +448,7 @@ function renderHistoryTable(historyData) {
     let headerRow = '<thead><tr>';
     displayKeys.forEach(key => {
         // Kapitalisasi untuk judul kolom
-        headerRow += `<th>${key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</th>`;
+        headerRow += <th>${key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</th>;
     });
     headerRow += '</tr></thead>';
     tableBody.innerHTML += headerRow;
@@ -458,7 +461,7 @@ function renderHistoryTable(historyData) {
             if (key === 'nilai' || key === 'selisih') {
                 value = formatValue(value, 2);
             }
-            bodyContent += `<td>${value}</td>`;
+            bodyContent += <td>${value}</td>;
         });
         bodyContent += '</tr>';
     });
@@ -473,7 +476,7 @@ function resizeChart() {
     // Iterasi melalui semua instance chart yang sudah disimpan
     for (const key in chartInstances) {
         const { chart, data } = chartInstances[key];
-        const chartElement = document.getElementById(`chart-${key}`);
+        const chartElement = document.getElementById(chart-${key});
         if (chartElement) {
              // Menggambar ulang chart agar menyesuaikan ukuran container yang berubah
             chart.draw(data, {
@@ -523,5 +526,4 @@ window.addEventListener('resize', resizeChart);
 document.addEventListener('DOMContentLoaded', () => {
     fetchData();
     showView('view-home');
-
 });
