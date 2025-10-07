@@ -50,6 +50,92 @@ function formatValue(value, decimals = 2) {
     return roundedNum.toLocaleString('id-ID', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
+// --- TEXT HELPERS ---
+function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+}
+
+// Convert numbered inline text (e.g. "1. a 2. b 3. c" or lines starting with numbers)
+// into an ordered list HTML. Also supports newline-separated items as <ul>.
+function toListHTML(text) {
+    // Handle null/undefined
+    if (text === null || text === undefined) return '<p>Tidak Tersedia.</p>';
+
+    // If the value is already an array, render each item (prefer numbered if items look numbered)
+    if (Array.isArray(text)) {
+        if (text.length === 0) return '<p>Tidak Tersedia.</p>';
+        // If array of primitives, render as UL
+        const primitives = text.every(t => (t === null || t === undefined) || (typeof t === 'string' || typeof t === 'number' || typeof t === 'boolean'));
+        if (primitives) {
+            return '<ul>' + text.map(t => '<li>' + escapeHtml(String(t)) + '</li>').join('') + '</ul>';
+        }
+        // For mixed/objects, render per item recursively
+        return '<div>' + text.map(item => typeof item === 'object' ? toListHTML(item) : '<p>' + escapeHtml(String(item)) + '</p>').join('') + '</div>';
+    }
+
+    // If it's an object, try to detect image-like or text-like structure
+    if (typeof text === 'object') {
+        // Common image property names used by APIs
+        const urlKeys = ['url', 'src', 'imageUrl', 'thumbnail', 'link'];
+        for (const k of urlKeys) {
+            if (text[k] && typeof text[k] === 'string') {
+                const safeUrl = escapeHtml(text[k]);
+                return <p><img src="${safeUrl}" alt="image" class="metadata-img"/></p>;
+            }
+        }
+
+        // If object has a 'text' or 'content' property, use that
+        if (text.text || text.content) {
+            return toListHTML(text.text || text.content);
+        }
+
+        // Fallback: attempt to stringify useful values (keys with primitive values)
+        const primitiveEntries = Object.entries(text).filter(([k, v]) => (v === null || ['string', 'number', 'boolean'].includes(typeof v)));
+        if (primitiveEntries.length) {
+            return '<ul>' + primitiveEntries.map(([k, v]) => <li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(String(v))}</li>).join('') + '</ul>';
+        }
+
+        // Last resort: stringify whole object safely
+        try {
+            return '<pre>' + escapeHtml(JSON.stringify(text, null, 2)) + '</pre>';
+        } catch (e) {
+            return '<p>Data tidak dapat ditampilkan.</p>';
+        }
+    }
+
+    // Primitive (string/number)
+    let s = String(text).trim();
+    if (!s) return '<p>Tidak Tersedia.</p>';
+
+    // Normalize newlines
+    s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    // Count numbered patterns like "1. " or "1) "
+    const numberedMatches = s.match(/\d+[\.)]\s+/g) || [];
+    if (numberedMatches.length >= 2) {
+        // Split on numbers, drop any empty leading
+        const parts = s.split(/\d+[\.)]\s+/).map(p => p.trim()).filter(Boolean);
+        if (parts.length) {
+            return '<ol>' + parts.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ol>';
+        }
+    }
+
+    // If newline-separated and multiple lines, create unordered list
+    const lines = s.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length > 1) {
+        return '<ul>' + lines.map(l => '<li>' + escapeHtml(l) + '</li>').join('') + '</ul>';
+    }
+
+    // Fallback: single paragraph (preserve single newlines with <br>)
+    return '<p>' + escapeHtml(s).replace(/\n/g, '<br>') + '</p>';
+}
+
 // --- FUNGSI 1: MENGGANTI TAMPILAN ---
 function showView(viewId) {
     document.querySelectorAll('.view-section').forEach(section => {
@@ -93,14 +179,14 @@ async function fetchData() {
         }
 
         if (!response.ok) {
-            throw new Error(`API error! Status: ${response.status}`);
+            throw new Error(API error! Status: ${response.status});
         }
         
         // Data dari Apps Script adalah Array of Indicator Objects
         const data = await response.json(); 
         
         if (data.error) {
-             dataGrid.innerHTML = `<div class="loading" style="color: red;">Error API: ${data.error}. Cek Apps Script logs Anda.</div>`;
+             dataGrid.innerHTML = <div class="loading" style="color: red;">Error API: ${data.error}. Cek Apps Script logs Anda.</div>;
              return;
         }
 
@@ -122,13 +208,13 @@ async function fetchData() {
 
     } catch (error) {
         console.error("Kesalahan saat mengambil data:", error);
-        dataGrid.innerHTML = `<div class="loading" style="color: red;">Gagal memuat data. Cek koneksi internet atau pastikan URL API sudah benar dan dideploy ulang. Pesan: ${error.message}</div>`;
+        dataGrid.innerHTML = <div class="loading" style="color: red;">Gagal memuat data. Cek koneksi internet atau pastikan URL API sudah benar dan dideploy ulang. Pesan: ${error.message}</div>;
     }
 }
 
 // --- FUNGSI 3: MEMBUAT KARTU DASHBOARD ---
 function createChartContainer(key) {
-    return `<div class="card-chart-container"><div id="chart-${key}" style="width: 100%; height: 100%;"></div></div>`;
+    return <div class="card-chart-container"><div id="chart-${key}" style="width: 100%; height: 100%;"></div></div>;
 }
 
 function createCard(data) {
@@ -142,7 +228,7 @@ function createCard(data) {
     const arrowChar = isPositive ? '▲' : (perubahanFloat < 0 ? '▼' : '▬');
     
     // Selisih diformat 2 desimal dengan tambahan "vs Tahun Lalu"
-    const changeText = `${arrowChar} ${formatValue(Math.abs(perubahanFloat), 2)} vs Tahun Lalu`;
+    const changeText = ${arrowChar} ${formatValue(Math.abs(perubahanFloat), 2)} vs Tahun Lalu;
 
     const chartHtml = createChartContainer(indicatorKey);
     
@@ -190,7 +276,7 @@ function drawDashboardCharts() {
     
     allIndicators.forEach(data => {
         const indicatorKey = data.sheet_name;
-        const chartElement = document.getElementById(`chart-${indicatorKey}`);
+        const chartElement = document.getElementById(chart-${indicatorKey});
         
         if (!chartElement) return;
         
@@ -305,37 +391,37 @@ function handleMetadataSelect(event) {
 
     if (dataDetail) { 
         const indicatorName = dataDetail.nama || indicatorKey;
-        metadataTitle.textContent = `Metadata: ${indicatorName}`;
+        metadataTitle.textContent = Metadata: ${indicatorName};
 
-        // Konten Metadata Lengkap
+        // Konten Metadata Lengkap (gunakan toListHTML untuk memformat numbered / multiline text)
         metadataContent.innerHTML = `
-            <h4>Nilai Terkini (${dataDetail.tahun || 'N/A'}):</h4> 
+            <h4>Nilai Terkini (${dataDetail.tahun || 'N/A'}):</h4>
             <p style="font-size: 1.2em; font-weight: bold; color: #3f51b5;">${formatValue(dataDetail.nilai, 2)}</p>
 
             <h4>Penjelasan/Definisi:</h4>
-            <p>${dataDetail.penjelasan || 'Tidak Tersedia.'}</p>
-            
+            ${toListHTML(dataDetail.penjelasan || dataDetail.definisi || 'Tidak Tersedia.')}
+
             <h4>Perhitungan/Metode:</h4>
-            <p>${dataDetail.perhitungan || 'Tidak Tersedia.'}</p>
-            
+            ${toListHTML(dataDetail.perhitungan || dataDetail.metode || 'Tidak Tersedia.')}
+
             <h4>Sumber Indikator:</h4>
-            <p>${dataDetail.sumber_indikator || 'Tidak Tersedia.'}</p>
-            
+            ${toListHTML(dataDetail.sumber_indikator || dataDetail.sumber || 'Tidak Tersedia.')}
+
             <h4>Faktor-faktor yang Mempengaruhi:</h4>
-            <p>${dataDetail['faktor-faktor_yang_mempengaruhi'] || 'Tidak Tersedia.'}</p>
-            
+            ${toListHTML(dataDetail['faktor-faktor_yang_mempengaruhi'] || dataDetail.faktor_faktor || dataDetail.faktor || 'Tidak Tersedia.')}
+
             <h4>Dampak:</h4>
-            <p>${dataDetail.dampak || 'Tidak Tersedia.'}</p>
+            ${toListHTML(dataDetail.dampak || 'Tidak Tersedia.')}
         `;
         
         // Tampilkan Tabel Historis
         metadataTableContainer.classList.remove('hidden');
-        document.getElementById('table-title').textContent = `Data Historis: ${indicatorName}`;
+        document.getElementById('table-title').textContent = Data Historis: ${indicatorName};
         renderHistoryTable(dataDetail.history);
         
     } else {
         metadataTitle.textContent = 'Metadata Indikator';
-        metadataContent.innerHTML = `Silakan pilih indikator dari *dropdown* di atas untuk melihat detail.`;
+        metadataContent.innerHTML = Silakan pilih indikator dari *dropdown* di atas untuk melihat detail.;
     }
 }
 
@@ -362,7 +448,7 @@ function renderHistoryTable(historyData) {
     let headerRow = '<thead><tr>';
     displayKeys.forEach(key => {
         // Kapitalisasi untuk judul kolom
-        headerRow += `<th>${key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</th>`;
+        headerRow += <th>${key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</th>;
     });
     headerRow += '</tr></thead>';
     tableBody.innerHTML += headerRow;
@@ -375,7 +461,7 @@ function renderHistoryTable(historyData) {
             if (key === 'nilai' || key === 'selisih') {
                 value = formatValue(value, 2);
             }
-            bodyContent += `<td>${value}</td>`;
+            bodyContent += <td>${value}</td>;
         });
         bodyContent += '</tr>';
     });
@@ -390,7 +476,7 @@ function resizeChart() {
     // Iterasi melalui semua instance chart yang sudah disimpan
     for (const key in chartInstances) {
         const { chart, data } = chartInstances[key];
-        const chartElement = document.getElementById(`chart-${key}`);
+        const chartElement = document.getElementById(chart-${key});
         if (chartElement) {
              // Menggambar ulang chart agar menyesuaikan ukuran container yang berubah
             chart.draw(data, {
